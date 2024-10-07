@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batalla Espacial - Game Over</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+            color: white;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background: #111;
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: red;
+            display: none; /* Inicialmente oculto */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameOver">Game Over</div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const context = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight * 0.8;
+
+        let shipX = canvas.width / 2;
+        let shipY = canvas.height - 50;
+        let bullets = [];
+        let aliens = [];
+        let alienBullets = [];
+        let alienSpeed = 2;
+        let alienBulletSpeed = 3;
+        let gameOver = false;
+
+        // Crear naves marcianas
+        function createAliens() {
+            for (let i = 0; i < 5; i++) {
+                aliens.push({ x: i * 120 + 50, y: 20, width: 40, height: 40 });
+            }
+        }
+        createAliens();
+
+        function drawShip() {
+            context.fillStyle = 'white';
+            context.fillRect(shipX - 20, shipY, 40, 20);
+        }
+
+        function drawAliens() {
+            context.fillStyle = 'green';
+            aliens.forEach(alien => {
+                context.fillRect(alien.x, alien.y, alien.width, alien.height);
+            });
+        }
+
+        function drawBullets() {
+            context.fillStyle = 'red';
+            bullets.forEach(bullet => {
+                context.fillRect(bullet.x, bullet.y, 5, 10);
+            });
+        }
+
+        function drawAlienBullets() {
+            context.fillStyle = 'yellow';
+            alienBullets.forEach(bullet => {
+                context.fillRect(bullet.x, bullet.y, 5, 10);
+            });
+        }
+
+        function update() {
+            if (gameOver) return; // Detener actualización si el juego ha terminado
+
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            drawShip();
+            drawAliens();
+            drawBullets();
+            drawAlienBullets();
+
+            // Mover las balas del jugador
+            bullets.forEach(bullet => {
+                bullet.y -= 5;
+            });
+
+            // Eliminar balas del jugador fuera de la pantalla
+            bullets = bullets.filter(bullet => bullet.y > 0);
+
+            // Mover naves marcianas
+            aliens.forEach(alien => {
+                alien.x += alienSpeed;
+                if (alien.x + alien.width > canvas.width || alien.x < 0) {
+                    alienSpeed = -alienSpeed;
+                    aliens.forEach(a => a.y += 20); // Bajar las naves si tocan los bordes
+                }
+            });
+
+            // Disparar balas de las naves marcianas
+            if (Math.random() < 0.02) {
+                aliens.forEach(alien => {
+                    alienBullets.push({ x: alien.x + alien.width / 2 - 2.5, y: alien.y + alien.height });
+                });
+            }
+
+            // Mover balas de las naves marcianas
+            alienBullets.forEach(bullet => {
+                bullet.y += alienBulletSpeed;
+            });
+
+            // Eliminar balas de las naves marcianas fuera de la pantalla
+            alienBullets = alienBullets.filter(bullet => bullet.y < canvas.height);
+
+            // Colisión entre balas del jugador y naves marcianas
+            bullets.forEach(bullet => {
+                aliens.forEach(alien => {
+                    if (
+                        bullet.x < alien.x + alien.width &&
+                        bullet.x + 5 > alien.x &&
+                        bullet.y < alien.y + alien.height &&
+                        bullet.y + 10 > alien.y
+                    ) {
+                        // Eliminar nave marciana y bala
+                        const alienIndex = aliens.indexOf(alien);
+                        const bulletIndex = bullets.indexOf(bullet);
+                        if (alienIndex > -1) aliens.splice(alienIndex, 1);
+                        if (bulletIndex > -1) bullets.splice(bulletIndex, 1);
+                    }
+                });
+            });
+
+            // Colisión entre balas de las naves marcianas y la nave del jugador
+            alienBullets.forEach(bullet => {
+                if (
+                    bullet.x < shipX + 20 &&
+                    bullet.x + 5 > shipX - 20 &&
+                    bullet.y + 10 > shipY
+                ) {
+                    gameOver = true;
+                    document.getElementById('gameOver').style.display = 'block'; // Mostrar Game Over
+                }
+            });
+        }
+
+        function gameLoop() {
+            update();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft' && shipX > 20 && !gameOver) {
+                shipX -= 20; // Mover izquierda
+            }
+            if (event.key === 'ArrowRight' && shipX < canvas.width - 20 && !gameOver) {
+                shipX += 20; // Mover derecha
+            }
+            if (event.key === ' ' && !gameOver) {
+                bullets.push({ x: shipX, y: shipY }); // Disparar
+            }
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
